@@ -1,7 +1,7 @@
 #include "EnemyPlane.h"
 #include "ConstantRes.h"
 #include "SimpleAudioEngine.h"
-
+#include "PlaneManager.h"
 using namespace CocosDenshion;
 
 CEnemyPlane::CEnemyPlane() : m_bIsActive(true), m_iBulletSpeed(200)
@@ -134,9 +134,6 @@ void CEnemyPlane::destroy()
 			SimpleAudioEngine::sharedEngine()->playEffect(sz_explode);
 	}
 
-    // 敌机爆炸，从敌机数组中删除
-	pEnemyPlanes->removeObject(this);  
-
     // 删除精灵
     this->removeFromParent();
     
@@ -167,7 +164,7 @@ void CEnemyPlane::shoot(float delta)
 	{
         pBullet->autorelease();
 		pBullet->init();
-		pEnemyBullet->addObject(pBullet);
+		CPlaneManager::sharePlaneManager()->getEnemyBullets()->addObject(pBullet);
 		this->getParent()->addChild(pBullet, pBullet->getZOrder(), 901);
         pBullet->setPosition(ccp(position.x, position.y));
 

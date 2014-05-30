@@ -2,10 +2,10 @@
 #define GAMESCENE_H_
 
 #include "cocos2d.h"
+#include "PlaneManager.h"
 #include "MainMenu.h"
-#include "MyPlane.h"
-#include "EnemyPlane.h"
-#include "Effect.h"
+#include "UnitSprite.h"
+
 
 USING_NS_CC;
 
@@ -36,8 +36,11 @@ public:
 	void updateUI();
 	void initBackground();							// 初始哈背景及漂浮物
 	void updateBackground(float delta);				// 更新背景及漂浮物位置  
-	void initPlane();								// 初始化飞机
-	void updatePlane(float delta);					// 更新飞机
+
+	void setGameState(int state);					// 设置游戏状态
+	void setGameOver();								// 设置游戏状态为结束
+	bool isGameOver();								// 判断是否游戏结束
+
 	void checkAllIsCollide();						// 检查碰撞
 	bool isCollided(CUnitSprite* a, CUnitSprite* b);// 检测2物体碰撞 
 	void gameOver();								// 游戏结束
@@ -60,8 +63,6 @@ private:
 	CCLabelTTF*	m_pLifeCount;						// 玩家飞机生命
 
 	CCRect	m_screenRect;							// 屏幕区域
-
-	CMyPlane* m_pMyplane;							// 玩家飞机
 };
 
 #endif

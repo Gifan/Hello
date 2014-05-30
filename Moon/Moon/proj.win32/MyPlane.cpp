@@ -4,6 +4,7 @@
 #include "Bullet.h"
 #include "Effect.h"
 #include "SimpleAudioEngine.h"
+#include "PlaneManager.h"
 
 using namespace CocosDenshion;
 
@@ -78,7 +79,7 @@ void CMyPlane::shoot(float delta)
 	{
         pBullet->autorelease();
 		pBullet->init();
-		pPlayBullet->addObject(pBullet);
+		CPlaneManager::sharePlaneManager()->getPlayBullets()->addObject(pBullet);
 		this->getParent()->addChild(pBullet, pBullet->getZOrder(), 901);
         pBullet->setPosition(ccp(position.x, position.y + contentSize.height * 0.4));
     }

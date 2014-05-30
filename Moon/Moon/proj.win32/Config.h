@@ -3,10 +3,6 @@
 
 #include "cocos2d.h"
 
-extern cocos2d::CCArray* pPlayBullet;				// 引用Config.cpp中的
-extern cocos2d::CCArray* pEnemyBullet;				// 分别为玩家子弹数组、敌人飞机子弹数组
-extern cocos2d::CCArray* pEnemyPlanes;				// 敌人飞机数组
-
 /**
 * 配置设置类
 */

@@ -22,6 +22,7 @@ public:
 	void removeExplode(CCNode* pSender);
 	CREATE_FUNC(CBullet);
 
+
 private:
 	bool m_bIsActive;		// 死了没
 	int m_iBulletType;		// 子弹类型

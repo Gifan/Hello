@@ -4,6 +4,7 @@
 #include "GameOverScene.h"
 #include "SimpleAudioEngine.h"
 
+
 using namespace CocosDenshion;
 
 
@@ -11,11 +12,10 @@ CGameLayer::CGameLayer():m_iState(sStatePlaying), m_bIsBgLoad(false), m_bIsFloat
 {
 
 }
+
 CGameLayer::~CGameLayer()
 { 
-	pPlayBullet->release();
-	pEnemyBullet->release();
-	pEnemyPlanes->release();
+
 }
 
 CCScene* CGameLayer::scene()
@@ -39,16 +39,6 @@ bool CGameLayer::init()
 	// 开启触摸
 	this->setTouchEnabled(true);
 
-	// 创建数组,retain增加一次引用，最后是在CConfig类中释放
-	pPlayBullet = CCArray::create();
-	pPlayBullet->retain();
-
-	pEnemyBullet = CCArray::create();
-	pEnemyBullet->retain();
-
-	pEnemyPlanes = CCArray::create();
-	pEnemyPlanes->retain();
-
 	CConfig::shareCConfig()->resetCConfig();
 
 	this->m_winSize = CCDirector::sharedDirector()->getWinSize();
@@ -58,11 +48,13 @@ bool CGameLayer::init()
 	if (CConfig::shareCConfig()->isSoundOn())
 		SimpleAudioEngine::sharedEngine()->playBackgroundMusic(sz_gameMusic, true);
 
-	// 初始化爆炸效果
-	CEffect::shareExplosion();
-
 	// 初始化飞机
-	this->initPlane();
+	CPlaneManager::sharePlaneManager()->initPlane(this);
+
+//	this->addChild(CPlaneManager::sharePlaneManager()->getMyPlane());
+
+	// 初始化飞机爆炸效果
+	CPlaneManager::sharePlaneManager()->initExplode();
 
 	// 初始化UI
 	this->initUI();
@@ -99,7 +91,7 @@ void CGameLayer::initUI()
 
 	// 创建飞机生命值
 	char life[3];
-	sprintf(life, "%d", this->m_pMyplane->getHP());
+	sprintf(life, "%d", CPlaneManager::sharePlaneManager()->getMyPlane()->getHP());
 	this->m_pLifeCount = CCLabelTTF::create(
 		life,
 		"微软雅黑",
@@ -137,7 +129,7 @@ void CGameLayer::updateUI()
 
 	// 更新飞机剩余生命值
 	char life[3];
-	sprintf(life, "%d", this->m_pMyplane->getHP());
+	sprintf(life, "%d", CPlaneManager::sharePlaneManager()->getMyPlane()->getHP());
 	this->m_pLifeCount->setString(life);
 }
 
@@ -166,55 +158,49 @@ void CGameLayer::mainMenu(CCObject* pSender)
 	CCDirector::sharedDirector()->replaceScene(CCTransitionFade::create(0.8f, pScene));
 
 }
+
+//更新画面
 void CGameLayer::update(float delta)
 {
 	if (this->m_iState == sStatePlaying)
 	{
 		this->checkAllIsCollide();
 		this->updateUI();
-		this->updatePlane(delta);
-	}
-}
+		CPlaneManager::sharePlaneManager()->updatePlane(this, delta);
 
-
-void CGameLayer::updatePlane(float delta)
-{
-	for (int i = 0; i < pEnemyPlanes->count(); ++i) 
-	{
-		CEnemyPlane* pEnemy = dynamic_cast<CEnemyPlane*>(pEnemyPlanes->objectAtIndex(i));
-		if (pEnemy != NULL)
+		if (this->isGameOver())
 		{
-			if (!pEnemy->isActive())
-			{
-				pEnemy->destroy();
-				CEnemyPlane* pEnemy = CEnemyPlane::createPlane();
-				pEnemy->initAction(this->m_pMyplane->getPosition());
-				this->addChild(pEnemy, 99);
-				pEnemyPlanes->addObject(pEnemy);
-			}
+			
+			this->setGameOver();
+			CCCallFunc* pGameOver = CCCallFunc::create(this, callfunc_selector(CGameLayer::gameOver));
+			this->runAction(CCSequence::create(CCDelayTime::create(2.0f), pGameOver, NULL));
 		}
-    }
-
-	// 玩家生命结束，游戏结束
-	if (this->m_pMyplane->getHP() <= 0)
-	{
-		this->m_iState = sStateGameOver;
-		this->m_pMyplane->destroy();
-		this->m_pMyplane = NULL;
-		CCCallFunc* pGameOver = CCCallFunc::create(this, callfunc_selector(CGameLayer::gameOver));
-		this->runAction(CCSequence::create(CCDelayTime::create(2.0f), pGameOver, NULL));
 	}
 }
+
+void CGameLayer::setGameState(int state)
+{
+	this->m_iState = state;
+}
+
+void CGameLayer::setGameOver()
+{
+	this->m_iState = sStateGameOver;
+}
+
+// 检测所有物体碰撞
 void CGameLayer::checkAllIsCollide()
 {
 	CCObject* pBullets;
 	CCObject* pEnemys;
 
+	CCArray* pEnemyPlanes = CPlaneManager::sharePlaneManager()->getEnemyPlanes();
 	// 循环敌机和玩家子弹和玩家飞机碰撞检测
 	CCARRAY_FOREACH(pEnemyPlanes, pEnemys)
 	{
 		CUnitSprite* pEnemy = (CUnitSprite*)(pEnemys);
 
+		CCArray* pPlayBullet = CPlaneManager::sharePlaneManager()->getPlayBullets();
 		// 子弹与敌机碰撞检测
 		CCARRAY_FOREACH(pPlayBullet, pBullets)
 		{	 
@@ -224,22 +210,30 @@ void CGameLayer::checkAllIsCollide()
 			{
 				pEnemy->hurt();
 				if (pBullet->isActive())
+				{
+					CPlaneManager::sharePlaneManager()->playExplode(this, pBullet->getPosition());
 					pBullet->destroy();
+					pBullet = NULL;
+				}
 			}
-			if (!(this->m_screenRect.intersectsRect(pBullet->boundingBox())))
+			if (pBullet != NULL && pBullet->isActive())
 			{
-				if (pBullet->isActive())
+				if (!(this->m_screenRect.intersectsRect(pBullet->boundingBox())))
+				{
+					CPlaneManager::sharePlaneManager()->playExplode(this, pBullet->getPosition());
 					pBullet->destroy();
-				//	CCLog("destroy success in playbullet");
+					pBullet = NULL;
+					//	CCLog("destroy success in playbullet");
+				}
 			}
 		}
 		// 敌机与玩家飞机碰撞检测
-		if (this->isCollided(pEnemy,this->m_pMyplane))
+		if (this->isCollided(pEnemy,CPlaneManager::sharePlaneManager()->getMyPlane()))
 		{
-			if (this->m_pMyplane->isActive())
+			if (CPlaneManager::sharePlaneManager()->getMyPlane()->isActive())
 			{
 				pEnemy->hurt();
-				this->m_pMyplane->hurt();
+				CPlaneManager::sharePlaneManager()->getMyPlane()->hurt();
 			}
 		}
 		if (!(this->m_screenRect.intersectsRect(pEnemy->boundingBox()))) 
@@ -248,29 +242,53 @@ void CGameLayer::checkAllIsCollide()
         }
 	}
 
+	CCArray* pEnemyBullet = CPlaneManager::sharePlaneManager()->getEnemyBullets();
+
 	CCARRAY_FOREACH(pEnemyBullet, pBullets)
 	{
 		CUnitSprite* pBullet = (CUnitSprite*)(pBullets);
-		if (pBullet != NULL)
+
+		if (pBullet != NULL && pBullet->isActive())
 		{
-			if (this->isCollided(pBullet, this->m_pMyplane))
+			if (this->isCollided(pBullet, CPlaneManager::sharePlaneManager()->getMyPlane()))
 			{
-				if (this->m_pMyplane->isActive())
+				if (CPlaneManager::sharePlaneManager()->getMyPlane()->isActive())
 				{
-					this->m_pMyplane->hurt();
+					CPlaneManager::sharePlaneManager()->getMyPlane()->hurt();
 					if (pBullet->isActive())
+					{
 						pBullet->destroy();
+						pBullet = NULL;
+					}
 				}
 			}
 		}
-		if (!(this->m_screenRect.intersectsRect(pBullet->boundingBox())))
+		if (pBullet != NULL && pBullet->isActive())
 		{
-			if (pBullet->isActive())
-				pBullet->destroy();
-			//	CCLog("destroy success in enemybullet");
+			if (!(this->m_screenRect.intersectsRect(pBullet->boundingBox())))
+			{
+					if (pBullet->isActive())
+					{
+						CPlaneManager::sharePlaneManager()->playExplode(this, pBullet->getPosition());
+						pBullet->destroy();
+						pBullet = NULL;
+					}
+					//	CCLog("destroy success in enemybullet");
+			}
 		}
 	}
 }
+
+
+bool CGameLayer::isGameOver()
+{
+	if (CPlaneManager::sharePlaneManager()->getMyPlane() == NULL) return true;
+	if (!(CPlaneManager::sharePlaneManager()->getMyPlane()->isActive()))
+		return true;
+	else
+		return false;
+}
+
 
 /**
 *滚动背景，这次是使用2张背景图然后循环加载滚动
@@ -361,25 +379,6 @@ void CGameLayer::updateBackground(float delta)
 	}
 }
 
-void CGameLayer::initPlane()
-{
-	// 加载玩家飞机
-	this->m_pMyplane = CMyPlane::create();
-	this->addChild(this->m_pMyplane, 99, 1001);
-
-	// 加载敌机
-	for (int i = 0; i < CConfig::shareCConfig()->getLevelState(); i++)
-	{
-		CEnemyPlane* pEnemy = CEnemyPlane::createPlane();
-		
-		// 根据玩家飞机位置初始化动作
-		pEnemy->initAction(this->m_pMyplane->getPosition());
-		this->addChild(pEnemy, 99);
-		pEnemyPlanes->addObject(pEnemy);
-	}
-}
-
-
 // 游戏结束回调函数
 void CGameLayer::gameOver()
 {
@@ -394,16 +393,16 @@ bool CGameLayer::ccTouchBegan(CCTouch* pTouch, CCEvent* pEvent)
 
 void CGameLayer::ccTouchMoved(CCTouch* pTouch, CCEvent* pEvent)
 {
-	if ((this->m_iState == sStatePlaying) && this->m_pMyplane)
+	if ((this->m_iState == sStatePlaying) && CPlaneManager::sharePlaneManager()->getMyPlane() != NULL)
 	{
 		// 修改当前飞机位置
 		CCPoint pos = pTouch->getDelta();
-		CCPoint currentPos = this->m_pMyplane->getPosition();
+		CCPoint currentPos = CPlaneManager::sharePlaneManager()->getMyPlane()->getPosition();
 		currentPos = ccpAdd(currentPos, pos);
 
 		// 锁住只能在屏幕区域范围移动
 		currentPos = ccpClamp(currentPos, CCPointZero, ccp(this->m_winSize.width, this->m_winSize.height));
-		this->m_pMyplane->setPosition(currentPos);
+		CPlaneManager::sharePlaneManager()->setMyPlanePos(currentPos);
 	}
 }
 
@@ -421,6 +420,7 @@ void CGameLayer::onEnter()
 }
 void CGameLayer::onExit()
 {
+	CPlaneManager::sharePlaneManager()->release();
 	CCDirector* pDirector = CCDirector::sharedDirector();
 	pDirector->getTouchDispatcher()->removeDelegate(this);
 	CCLayer::onExit();

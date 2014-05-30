@@ -1,6 +1,6 @@
 #include "Bullet.h"
 #include "Config.h"
-
+#include "PlaneManager.h"
 
 CBullet::CBullet():m_bIsActive(true), m_iSpeed(200), m_iBulletType(ENEMY_BULLET), m_iZOrder(99)
 {
@@ -46,25 +46,12 @@ void CBullet::hurt()
 
 void CBullet::destroy()
 {
-    // ×Óµ¯±¬Õ¨ÌØÐ§
-	CCSprite* pExplode = CCSprite::create(sz_hit);
-    ccBlendFunc cb = {GL_SRC_ALPHA, GL_ONE };
-    pExplode->setBlendFunc(cb);
-    pExplode->setPosition(this->getPosition());
-    pExplode->setScale(0.75f);
-    this->getParent()->addChild(pExplode, 99);
 
 	this->m_bIsActive = false;
+	this->removeFromParent();
 	if (this->m_iBulletType == ENEMY_BULLET)
-		pEnemyBullet->removeObject(this);
-	else pPlayBullet->removeObject(this);
-	
-    this->removeFromParent();
-  
-    CCCallFuncN* pRemoveExplode =  CCCallFuncN::create(pExplode, callfuncN_selector(CBullet::removeExplode));
-    pExplode->runAction(CCSequence::create(CCFadeOut::create(0.3f), pRemoveExplode, NULL));
-    
-
+		CPlaneManager::sharePlaneManager()->getEnemyBullets()->removeObject(this);
+	else CPlaneManager::sharePlaneManager()->getPlayBullets()->removeObject(this);
 }
 
 void CBullet::removeExplode(CCNode *pSender)

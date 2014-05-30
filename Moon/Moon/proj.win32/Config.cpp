@@ -4,10 +4,6 @@
 USING_NS_CC;
 static CConfig* g_Config = NULL;
 
-CCArray* pPlayBullet;
-CCArray* pEnemyBullet;
-CCArray* pEnemyPlanes;
-
 CConfig::CConfig():m_bIsSoundOn(true), m_iLevel(MODE_EASY), m_iScoreVal(0)
 {
 
@@ -15,21 +11,7 @@ CConfig::CConfig():m_bIsSoundOn(true), m_iLevel(MODE_EASY), m_iScoreVal(0)
 
 CConfig::~CConfig()
 {
-	if (pPlayBullet != NULL)
-	{
-		pPlayBullet->release();
-		pPlayBullet = NULL;
-	}
-	if (pEnemyBullet != NULL)
-	{
-		pEnemyBullet->release();
-		pEnemyBullet = NULL;
-	}
-	if (pEnemyPlanes != NULL)
-	{
-		pEnemyPlanes->release();
-		pEnemyPlanes = NULL;
-	}
+
 }
 
 // µ¥ÀýÄ£Ê½

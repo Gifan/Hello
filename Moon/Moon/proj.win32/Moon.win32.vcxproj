@@ -140,6 +140,7 @@
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MyPlane.h" />
     <ClInclude Include="OptionScene.h" />
+    <ClInclude Include="PlaneManager.h" />
     <ClInclude Include="UnitSprite.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
@@ -156,6 +157,7 @@
     <ClCompile Include="MainMenu.cpp" />
     <ClCompile Include="MyPlane.cpp" />
     <ClCompile Include="OptionScene.cpp" />
+    <ClCompile Include="PlaneManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
